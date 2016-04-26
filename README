@@ -1,0 +1,2 @@
+An implementation of (some fragment of) cubical type theory using rewrite rules,
+based on a talk given by Conor McBride at the 23rd Agda's Implementor's Meeting.
