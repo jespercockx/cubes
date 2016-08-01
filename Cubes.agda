@@ -1,5 +1,6 @@
 {-# OPTIONS --rewriting #-}
 
+open import Data.Bool using (Bool; true; false)
 open import Data.Product using (Σ; Σ-syntax; _×_; _,_; proj₁; proj₂)
 
 Π : ∀ {ℓ ℓ′} (A : Set ℓ) (B : A → Set ℓ′) → Set _
@@ -13,19 +14,24 @@ infix 10 _─_
 postulate _↦_ : ∀ {a} {A : Set a} → A → A → Set
 {-# BUILTIN REWRITE _↦_ #-}
 
-postulate
-  I        : Set
-  ₀ ₁      : I
-  _[_-_]   : I → I → I → I
+I = Bool
+
+pattern ₀ = false
+
+pattern ₁ = true
+
+_[_-_] : I → I → I → I
+₀ [ y - z ] = y
+₁ [ y - z ] = z
 
 data _─_ {ℓ} {A : Set ℓ} : A → A → Set ℓ where
-  path : (M : I → A) → M ₀ ─ M ₁
+  path : (M : ..(_ : I) → A) → M ₀ ─ M ₁
 
-_$_ : ∀ {ℓ} {A : Set ℓ} {a b : A} → a ─ b → I → A
+_$_ : ∀ {ℓ} {A : Set ℓ} {a b : A} → a ─ b → ..(_ : I) → A
 path M $ i = M i
 
 postulate
-  coerce   : ∀ {ℓ} {S T : Set ℓ} (Q : S ─ T) (p q : I) → Q $ p → Q $ q
+  coerce : ∀ {ℓ} {S T : Set ℓ} (Q : S ─ T) ..(p q : I) → Q $ p → Q $ q
   _∘_      : ∀ {ℓ} {S T U : Set ℓ} → S ─ T → T ─ U → S ─ U
 
 infixr 20 coerce
@@ -35,15 +41,11 @@ infix 2 path
 syntax path (λ i → t) = ⟨ i ⟩ t
 
 postulate
-  [-]-left   : ∀ q r → ₀ [ q - r ] ↦ q
-  [-]-right  : ∀ q r → ₁ [ q - r ] ↦ r
   coerce-0-0 : ∀ ℓ (S T : Set ℓ) (Q : S ─ T) a → a [ ₀ ∣ Q ∣ ₀ ⟩ ↦ a
   coerce-1-1 : ∀ ℓ (S T : Set ℓ) (Q : S ─ T) a → a [ ₁ ∣ Q ∣ ₁ ⟩ ↦ a
   $-₀        : ∀ ℓ (A : Set ℓ) (S T : A) (Q : S ─ T) → Q $ ₀ ↦ S
   $-₁        : ∀ ℓ (A : Set ℓ) (S T : A) (Q : S ─ T) → Q $ ₁ ↦ T
 
-{-# REWRITE [-]-left   #-}
-{-# REWRITE [-]-right  #-}
 {-# REWRITE coerce-0-0 #-}
 {-# REWRITE coerce-1-1 #-}
 {-# REWRITE $-₀        #-}
@@ -69,44 +71,44 @@ postulate
   coerce-∘   : ∀ ℓ (S T U : Set ℓ) (Q : S ─ T) (Q' : T ─ U) (a : S) → a [ ₀ ∣ Q ∘ Q' ∣ ₁ ⟩ ↦ ((a [ ₀ ∣ Q ∣ ₁ ⟩) [ ₀ ∣ Q' ∣ ₁ ⟩)
   coerce-∘′  : ∀ ℓ (S T U : Set ℓ) (Q : S ─ T) (Q' : T ─ U) a → a [ ₁ ∣ Q ∘ Q' ∣ ₀ ⟩ ↦ ((a [ ₁ ∣ Q' ∣ ₀ ⟩) [ ₁ ∣ Q ∣ ₀ ⟩)
 
-  coerce-Σ   : ∀ ℓ (S : I → Set ℓ) (T : (i : I) → S i → Set ℓ) (s : S ₀) (t : T ₀ s)
+  coerce-Σ   : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (s : S ₀) (t : T ₀ s)
              → (s , t) [ ₀ ∣ ⟨ i ⟩ Σ (S i) (T i) ∣ ₁ ⟩ ↦
-               let s- : (j : I) → S j
+               let s- : ..(j : I) → S j
                    s- j = s [ ₀ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : (j : I) → T j (s- j)
+                   t- : ..(j : I) → T j (s- j)
                    t- j = t [ ₀ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  s- ₁ , t- ₁
 
-  coerce-Σ′  : ∀ ℓ (S : I → Set ℓ) (T : (i : I) → S i → Set ℓ) (s : S ₁) (t : T ₁ s)
+  coerce-Σ′  : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (s : S ₁) (t : T ₁ s)
              → (s , t) [ ₁ ∣ ⟨ i ⟩ Σ (S i) (T i) ∣ ₀ ⟩ ↦
-               let s- : (j : I) → S j
+               let s- : ..(j : I) → S j
                    s- j = s [ ₁ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : (j : I) → T j (s- j)
+                   t- : ..(j : I) → T j (s- j)
                    t- j = t [ ₁ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  s- ₀ , t- ₀
 
-  coerce-Π   : ∀ ℓ (S : I → Set ℓ) (T : (i : I) → S i → Set ℓ) (t : Π (S ₀) (T ₀))
+  coerce-Π   : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (t : Π (S ₀) (T ₀))
              → (λ x → t x) [ ₀ ∣ ⟨ i ⟩ Π (S i) (T i) ∣ ₁ ⟩ ↦ λ x →
-               let s- : (j : I) → S j
+               let s- : ..(j : I) → S j
                    s- j = x [ ₁ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : (j : I) → T j (s- j)
+                   t- : ..(j : I) → T j (s- j)
                    t- j = t (s- ₀) [ ₀ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  t- ₁
 
-  coerce-Π′  : ∀ ℓ (S : I → Set ℓ) (T : (i : I) → S i → Set ℓ) (t : Π (S ₁) (T ₁))
+  coerce-Π′  : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (t : Π (S ₁) (T ₁))
              → (λ x → t x) [ ₁ ∣ ⟨ i ⟩ Π (S i) (T i) ∣ ₀ ⟩ ↦ λ x →
-               let s- : (j : I) → S j
+               let s- : ..(j : I) → S j
                    s- j = x [ ₀ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : (j : I) → T j (s- j)
+                   t- : ..(j : I) → T j (s- j)
                    t- j = t (s- ₁) [ ₁ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  t- ₀
 
-  coerce-─   : ∀ ℓ (S T : I → Set ℓ) (Q : S ₀ ─ T ₀)
+  coerce-─   : ∀ ℓ (S T : ..(_ : I) → Set ℓ) (Q : S ₀ ─ T ₀)
              → Q [ ₀ ∣ ⟨ i ⟩ S i ─ T i ∣ ₁ ⟩ ↦
                (⟨ i ⟩ S (i [ ₁ - ₀ ])) ∘ Q ∘ (⟨ i ⟩ T i)
 
 
-  coerce-─′  : ∀ ℓ (S T : I → Set ℓ) (Q : S ₁ ─ T ₁)
+  coerce-─′  : ∀ ℓ (S T : ..(_ : I) → Set ℓ) (Q : S ₁ ─ T ₁)
              → Q [ ₁ ∣ ⟨ i ⟩ S i ─ T i ∣ ₀ ⟩ ↦
                (⟨ i ⟩ S i) ∘ Q ∘ (⟨ i ⟩ T (i [ ₁ - ₀ ]))
 
