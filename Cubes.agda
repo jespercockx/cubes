@@ -14,24 +14,30 @@ infix 10 _─_
 postulate _↦_ : ∀ {a} {A : Set a} → A → A → Set
 {-# BUILTIN REWRITE _↦_ #-}
 
-I = Bool
+record I : Set where
+  constructor squash
+  field
+    ..proof : Bool
 
-pattern ₀ = false
+₀ ₁ : I
+₀ = squash false
+₁ = squash true
 
-pattern ₁ = true
+reparam : Bool → Bool → Bool → Bool
+reparam false y z = y
+reparam true y z = z
 
 _[_-_] : I → I → I → I
-₀ [ y - z ] = y
-₁ [ y - z ] = z
+squash x [ squash y - squash z ] = squash (reparam x y z)
 
 data _─_ {ℓ} {A : Set ℓ} : A → A → Set ℓ where
-  path : (M : ..(_ : I) → A) → M ₀ ─ M ₁
+  path : (M : (_ : I) → A) → M ₀ ─ M ₁
 
-_$_ : ∀ {ℓ} {A : Set ℓ} {a b : A} → a ─ b → ..(_ : I) → A
+_$_ : ∀ {ℓ} {A : Set ℓ} {a b : A} → a ─ b → (_ : I) → A
 path M $ i = M i
 
 postulate
-  coerce : ∀ {ℓ} {S T : Set ℓ} (Q : S ─ T) ..(p q : I) → Q $ p → Q $ q
+  coerce : ∀ {ℓ} {S T : Set ℓ} (Q : S ─ T) (p q : I) → Q $ p → Q $ q
   _∘_      : ∀ {ℓ} {S T U : Set ℓ} → S ─ T → T ─ U → S ─ U
 
 infixr 20 coerce
@@ -52,9 +58,9 @@ postulate
 {-# REWRITE $-₁        #-}
 
 postulate
-  [₀-₀]      : ∀ p → p [ ₀ - ₀ ] ↦ ₀
-  [₀-₁]      : ∀ p → p [ ₀ - ₁ ] ↦ p
-  [₁-₁]      : ∀ p → p [ ₁ - ₁ ] ↦ ₁
+  [₀-₀]      : ∀ p → reparam p false false ↦ false
+  [₀-₁]      : ∀ p → reparam p false true  ↦ p
+  [₁-₁]      : ∀ p → reparam p true  true  ↦ true
   path-η     : ∀ ℓ (A : Set ℓ) (S T : A) (Q : S ─ T) → ⟨ i ⟩ (Q $ i) ↦ Q
 
 {-# REWRITE [₀-₀]  #-}
@@ -71,44 +77,44 @@ postulate
   coerce-∘   : ∀ ℓ (S T U : Set ℓ) (Q : S ─ T) (Q' : T ─ U) (a : S) → a [ ₀ ∣ Q ∘ Q' ∣ ₁ ⟩ ↦ ((a [ ₀ ∣ Q ∣ ₁ ⟩) [ ₀ ∣ Q' ∣ ₁ ⟩)
   coerce-∘′  : ∀ ℓ (S T U : Set ℓ) (Q : S ─ T) (Q' : T ─ U) a → a [ ₁ ∣ Q ∘ Q' ∣ ₀ ⟩ ↦ ((a [ ₁ ∣ Q' ∣ ₀ ⟩) [ ₁ ∣ Q ∣ ₀ ⟩)
 
-  coerce-Σ   : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (s : S ₀) (t : T ₀ s)
+  coerce-Σ   : ∀ ℓ (S : (_ : I) → Set ℓ) (T : (i : I) → S i → Set ℓ) (s : S ₀) (t : T ₀ s)
              → (s , t) [ ₀ ∣ ⟨ i ⟩ Σ (S i) (T i) ∣ ₁ ⟩ ↦
-               let s- : ..(j : I) → S j
+               let s- : (j : I) → S j
                    s- j = s [ ₀ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : ..(j : I) → T j (s- j)
+                   t- : (j : I) → T j (s- j)
                    t- j = t [ ₀ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  s- ₁ , t- ₁
 
-  coerce-Σ′  : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (s : S ₁) (t : T ₁ s)
+  coerce-Σ′  : ∀ ℓ (S : (_ : I) → Set ℓ) (T : (i : I) → S i → Set ℓ) (s : S ₁) (t : T ₁ s)
              → (s , t) [ ₁ ∣ ⟨ i ⟩ Σ (S i) (T i) ∣ ₀ ⟩ ↦
-               let s- : ..(j : I) → S j
+               let s- : (j : I) → S j
                    s- j = s [ ₁ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : ..(j : I) → T j (s- j)
+                   t- : (j : I) → T j (s- j)
                    t- j = t [ ₁ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  s- ₀ , t- ₀
 
-  coerce-Π   : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (t : Π (S ₀) (T ₀))
+  coerce-Π   : ∀ ℓ (S : (_ : I) → Set ℓ) (T : (i : I) → S i → Set ℓ) (t : Π (S ₀) (T ₀))
              → (λ x → t x) [ ₀ ∣ ⟨ i ⟩ Π (S i) (T i) ∣ ₁ ⟩ ↦ λ x →
-               let s- : ..(j : I) → S j
+               let s- : (j : I) → S j
                    s- j = x [ ₁ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : ..(j : I) → T j (s- j)
+                   t- : (j : I) → T j (s- j)
                    t- j = t (s- ₀) [ ₀ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  t- ₁
 
-  coerce-Π′  : ∀ ℓ (S : ..(_ : I) → Set ℓ) (T : ..(i : I) → S i → Set ℓ) (t : Π (S ₁) (T ₁))
+  coerce-Π′  : ∀ ℓ (S : (_ : I) → Set ℓ) (T : (i : I) → S i → Set ℓ) (t : Π (S ₁) (T ₁))
              → (λ x → t x) [ ₁ ∣ ⟨ i ⟩ Π (S i) (T i) ∣ ₀ ⟩ ↦ λ x →
-               let s- : ..(j : I) → S j
+               let s- : (j : I) → S j
                    s- j = x [ ₀ ∣ ⟨ i ⟩ S i ∣ j ⟩
-                   t- : ..(j : I) → T j (s- j)
+                   t- : (j : I) → T j (s- j)
                    t- j = t (s- ₁) [ ₁ ∣ ⟨ i ⟩ T i (s- i) ∣ j ⟩
                in  t- ₀
 
-  coerce-─   : ∀ ℓ (S T : ..(_ : I) → Set ℓ) (Q : S ₀ ─ T ₀)
+  coerce-─   : ∀ ℓ (S T : (_ : I) → Set ℓ) (Q : S ₀ ─ T ₀)
              → Q [ ₀ ∣ ⟨ i ⟩ S i ─ T i ∣ ₁ ⟩ ↦
                (⟨ i ⟩ S (i [ ₁ - ₀ ])) ∘ Q ∘ (⟨ i ⟩ T i)
 
 
-  coerce-─′  : ∀ ℓ (S T : ..(_ : I) → Set ℓ) (Q : S ₁ ─ T ₁)
+  coerce-─′  : ∀ ℓ (S T : (_ : I) → Set ℓ) (Q : S ₁ ─ T ₁)
              → Q [ ₁ ∣ ⟨ i ⟩ S i ─ T i ∣ ₀ ⟩ ↦
                (⟨ i ⟩ S i) ∘ Q ∘ (⟨ i ⟩ T (i [ ₁ - ₀ ]))
 
